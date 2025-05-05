@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tech Inventory Report</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      font-family: sans-serif;
+      margin: 2rem;
+      background: #f4f4f4;
+    }
+    h1 {
+      text-align: center;
+      color: #333;
+    }
+    .chart-container {
+      max-width: 700px;
+      margin: 2rem auto;
+      background: white;
+      padding: 1rem;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    }
+    .summary {
+      text-align: center;
+      margin-top: 2rem;
+      font-size: 1.1rem;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.95rem;
+    }
+    th, td {
+      text-align: left;
+      padding: 8px;
+      border-bottom: 1px solid #ccc;
+    }
+  </style>
+</head>
+<body>
+  <h1>Tech Inventory Report</h1>
+  <div class="summary" id="summary"></div>
+  <div class="chart-container">
+    <canvas id="osChart"></canvas>
+  </div>
+  <div class="chart-container">
+    <canvas id="buildingChart"></canvas>
+  </div>
+  <div class="chart-container">
+    <h3>Staff Still Using Windows 10</h3>
+    <table id="win10Table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Building</th>
+          <th>Device</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+    <p style="margin-top: 0.5rem; font-style: italic; font-size: 0.9rem; color: #555;">
+      <span style="background-color: #fff3cd; padding: 0 6px; border-radius: 4px;">&nbsp;</span> Highlighted rows indicate users with Windows 10 desktops and no compliant Windows 11 laptop.
+    </p>
+  </div>
+  <div class="chart-container">
+    <h3>Detailed Breakdown of Windows 10 Devices</h3>
+    <table id="win10Details">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Building</th>
+          <th>Device Type</th>
+          <th>Model</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <script>
+    async function loadReportData() {
+      const res = await fetch("https://api.sheetbest.com/sheets/ef4d1f1d-5f4b-4728-b775-c70af5e5119f");
+      const data = await res.json();
+
+      const windows10Users = data.filter(row => row.desktop_os === "Windows 10" || row.laptop_os === "Windows 10");
+      const windows11Users = data.filter(row => row.desktop_os === "Windows 11" || row.laptop_os === "Windows 11");
+
+      const buildingCounts = {};
+      data.forEach(row => {
+        const building = row.building || "Unknown";
+        buildingCounts[building] = (buildingCounts[building] || 0) + 1;
+      });
+
+      // Summary
+      document.getElementById("summary").innerHTML = `
+        <strong>Total Submissions:</strong> ${data.length} <br>
+        <strong>Windows 10 Users:</strong> ${windows10Users.length} <br>
+        <strong>Windows 11 Users:</strong> ${windows11Users.length}
+      `;
+
+      // OS Chart
+      new Chart(document.getElementById("osChart"), {
+        type: 'pie',
+        data: {
+          labels: ['Windows 10', 'Windows 11'],
+          datasets: [{
+            data: [windows10Users.length, windows11Users.length],
+            backgroundColor: ['#e57373', '#64b5f6']
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: { legend: { position: 'bottom' } }
+        }
+      });
+
+      // Building Chart
+      new Chart(document.getElementById("buildingChart"), {
+        type: 'bar',
+        data: {
+          labels: Object.keys(buildingCounts),
+          datasets: [{
+            label: 'Submissions by Building',
+            data: Object.values(buildingCounts),
+            backgroundColor: '#9575cd'
+          }]
+        },
+        options: {
+          responsive: true,
+          scales: {
+            y: {
+              beginAtZero: true
+            }
+          }
+        }
+      });
+
+      // Populate Windows 10 table
+      const win10TableBody = document.querySelector("#win10Table tbody");
+            windows10Users.forEach(row => {
+        const isDesktop = row.desktop_os === "Windows 10";
+        const isLaptop = row.laptop_os === "Windows 10";
+        const hasWin11Laptop = row.laptop_os === "Windows 11";
+
+        if (isDesktop && !hasWin11Laptop) {
+          win10DetailsBody.innerHTML += `
+            <tr style="background-color: #fff3cd;">
+              <td>${row.name || ""}</td>
+              <td>${row.building || ""}</td>
+              <td>Desktop</td>
+              <td>${row.desktop_model || ""}</td>
+            </tr>`;
+        }
+
+        if (isLaptop) {
+          win10DetailsBody.innerHTML += `
+            <tr>
+              <td>${row.name || ""}</td>
+              <td>${row.building || ""}</td>
+              <td>Laptop</td>
+              <td>${row.laptop_model || ""}</td>
+            </tr>`;
+        }
+      });
+    }
+
+          const win10DetailsBody = document.querySelector("#win10Details tbody");
+      windows10Users.forEach(row => {
+        const isDesktop = row.desktop_os === "Windows 10";
+        const isLaptop = row.laptop_os === "Windows 10";
+
+        if (isDesktop) {
+          win10DetailsBody.innerHTML += `
+$1</tr>`;
+        }
+
+        if (isLaptop) {
+          win10DetailsBody.innerHTML += `
+            <tr>
+              <td>${row.name || ""}</td>
+              <td>${row.building || ""}</td>
+              <td>Laptop</td>
+              <td>${row.laptop_model || ""}</td>
+            </tr>`;
+        }
+      });
+
+            // Cleartouch OS Chart
+      const cleartouch10 = data.filter(row => row.cleartouch_os === "Windows 10").length;
+      const cleartouch11 = data.filter(row => row.cleartouch_os === "Windows 11").length;
+
+      new Chart(document.getElementById("cleartouchChart"), {
+        type: 'doughnut',
+        data: {
+          labels: ['Cleartouch Windows 10', 'Cleartouch Windows 11'],
+          datasets: [{
+            data: [cleartouch10, cleartouch11],
+            backgroundColor: ['#ffb74d', '#81c784']
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: { legend: { position: 'bottom' } }
+        }
+      });
+
+      loadReportData();
+  </script>
+  <div class="chart-container">
+    <h3>Cleartouch OS Breakdown</h3>
+    <canvas id="cleartouchChart"></canvas>
+  </div>
+</body>
+</html>
