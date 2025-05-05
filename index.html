@@ -82,7 +82,7 @@
 
   <script>
     async function loadReportData() {
-      const res = await fetch("https://api.sheetbest.com/sheets/ef4d1f1d-5f4b-4728-b775-c70af5e5119f");
+      const res = await fetch("https://techinventorybackend.onrender.com/data");
       const data = await res.json();
 
       const windows10Users = data.filter(row => row.desktop_os === "Windows 10" || row.laptop_os === "Windows 10");
