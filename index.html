@@ -98,8 +98,7 @@
       document.getElementById("summary").innerHTML = `
         <strong>Total Submissions:</strong> ${data.length} <br>
         <strong>Windows 10 Users:</strong> ${windows10Users.length} <br>
-        <strong>Windows 11 Users:</strong> ${windows11Users.length}
-      `;
+        <strong>Windows 11 Users:</strong> ${windows11Users.length}`;
 
       // OS Chart
       new Chart(document.getElementById("osChart"), {
@@ -138,12 +137,24 @@
         }
       });
 
-      // Populate Windows 10 table
+      // Windows 10 Device Tables
       const win10TableBody = document.querySelector("#win10Table tbody");
-            windows10Users.forEach(row => {
+      const win10DetailsBody = document.querySelector("#win10Details tbody");
+
+      windows10Users.forEach(row => {
         const isDesktop = row.desktop_os === "Windows 10";
         const isLaptop = row.laptop_os === "Windows 10";
         const hasWin11Laptop = row.laptop_os === "Windows 11";
+
+        const deviceType = isDesktop ? "Desktop" : isLaptop ? "Laptop" : "";
+        if (deviceType) {
+          win10TableBody.innerHTML += `
+            <tr>
+              <td>${row.name || ""}</td>
+              <td>${row.building || ""}</td>
+              <td>${deviceType}</td>
+            </tr>`;
+        }
 
         if (isDesktop && !hasWin11Laptop) {
           win10DetailsBody.innerHTML += `
@@ -165,30 +176,8 @@
             </tr>`;
         }
       });
-    }
 
-          const win10DetailsBody = document.querySelector("#win10Details tbody");
-      windows10Users.forEach(row => {
-        const isDesktop = row.desktop_os === "Windows 10";
-        const isLaptop = row.laptop_os === "Windows 10";
-
-        if (isDesktop) {
-          win10DetailsBody.innerHTML += `
-$1</tr>`;
-        }
-
-        if (isLaptop) {
-          win10DetailsBody.innerHTML += `
-            <tr>
-              <td>${row.name || ""}</td>
-              <td>${row.building || ""}</td>
-              <td>Laptop</td>
-              <td>${row.laptop_model || ""}</td>
-            </tr>`;
-        }
-      });
-
-            // Cleartouch OS Chart
+      // Cleartouch OS Chart
       const cleartouch10 = data.filter(row => row.cleartouch_os === "Windows 10").length;
       const cleartouch11 = data.filter(row => row.cleartouch_os === "Windows 11").length;
 
@@ -206,8 +195,9 @@ $1</tr>`;
           plugins: { legend: { position: 'bottom' } }
         }
       });
+    }
 
-      loadReportData();
+    loadReportData();
   </script>
   <div class="chart-container">
     <h3>Cleartouch OS Breakdown</h3>
