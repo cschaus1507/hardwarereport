@@ -15,8 +15,8 @@
       text-align: center;
       color: #333;
     }
-    .chart-container {
-      max-width: 700px;
+    .chart-container, .table-container {
+      max-width: 900px;
       margin: 2rem auto;
       background: white;
       padding: 1rem;
@@ -25,7 +25,6 @@
     }
     .summary {
       text-align: center;
-      margin-top: 2rem;
       font-size: 1.1rem;
     }
     table {
@@ -38,47 +37,54 @@
       padding: 8px;
       border-bottom: 1px solid #ccc;
     }
+    @media print {
+      button, .no-print { display: none; }
+    }
+    .download-button {
+      display: block;
+      margin: 1rem auto;
+      padding: 0.5rem 1rem;
+      background: #4a63f1;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
   <h1>Tech Inventory Report</h1>
   <div class="summary" id="summary"></div>
+
   <div class="chart-container">
     <canvas id="osChart"></canvas>
   </div>
-  <div class="chart-container">
-    <canvas id="buildingChart"></canvas>
-  </div>
-  <div class="chart-container">
-    <h3>Staff Still Using Windows 10</h3>
-    <table id="win10Table">
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Building</th>
-          <th>Device</th>
-        </tr>
-      </thead>
+
+  <div class="table-container">
+    <h3>Desktops Still on Windows 10</h3>
+    <table id="desktopWin10">
+      <thead><tr><th>Name</th><th>Model</th><th>Mark Upgraded</th></tr></thead>
       <tbody></tbody>
     </table>
-    <p style="margin-top: 0.5rem; font-style: italic; font-size: 0.9rem; color: #555;">
-      <span style="background-color: #fff3cd; padding: 0 6px; border-radius: 4px;">&nbsp;</span> Highlighted rows indicate users with Windows 10 desktops and no compliant Windows 11 laptop.
-    </p>
   </div>
-  <div class="chart-container">
-    <h3>Detailed Breakdown of Windows 10 Devices</h3>
+
+  <div class="table-container">
+    <h3>Cleartouch Panels on Windows 10</h3>
+    <table id="cleartouchWin10">
+      <thead><tr><th>Name</th><th>Model</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="table-container">
+    <h3>Detailed Breakdown of All Windows 10 Users</h3>
     <table id="win10Details">
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Building</th>
-          <th>Device Type</th>
-          <th>Model</th>
-        </tr>
-      </thead>
+      <thead><tr><th>Name</th><th>Building</th><th>Device Type</th><th>Model</th></tr></thead>
       <tbody></tbody>
     </table>
   </div>
+
+  <button class="download-button" onclick="window.print()">🖨️ Print / Save as PDF</button>
 
   <script>
     async function loadReportData() {
@@ -86,122 +92,67 @@
       const data = await res.json();
 
       const windows10Users = data.filter(row => row.desktop_os === "Windows 10" || row.laptop_os === "Windows 10");
-      const windows11Users = data.filter(row => row.desktop_os === "Windows 11" || row.laptop_os === "Windows 11");
+      const win10Desktops = data.filter(row => row.desktop_os === "Windows 10");
+      const win10Cleartouch = data.filter(row => row.cleartouch_os === "Windows 10");
 
-      const buildingCounts = {};
+      const osCounts = { 'Windows 10': 0, 'Windows 11': 0 };
       data.forEach(row => {
-        const building = row.building || "Unknown";
-        buildingCounts[building] = (buildingCounts[building] || 0) + 1;
+        if (row.desktop_os) osCounts[row.desktop_os] = (osCounts[row.desktop_os] || 0) + 1;
+        if (row.laptop_os) osCounts[row.laptop_os] = (osCounts[row.laptop_os] || 0) + 1;
       });
 
-      // Summary
       document.getElementById("summary").innerHTML = `
-        <strong>Total Submissions:</strong> ${data.length} <br>
-        <strong>Windows 10 Users:</strong> ${windows10Users.length} <br>
-        <strong>Windows 11 Users:</strong> ${windows11Users.length}`;
+        <strong>Total Submissions:</strong> ${data.length}<br>
+        <strong>Desktops on Windows 10:</strong> ${win10Desktops.length}<br>
+        <strong>Cleartouches on Windows 10:</strong> ${win10Cleartouch.length}<br>
+        <strong>Total Windows 10 Users:</strong> ${windows10Users.length}`;
 
-      // OS Chart
       new Chart(document.getElementById("osChart"), {
-        type: 'pie',
+        type: 'bar',
         data: {
-          labels: ['Windows 10', 'Windows 11'],
+          labels: Object.keys(osCounts),
           datasets: [{
-            data: [windows10Users.length, windows11Users.length],
+            label: 'OS Totals',
+            data: Object.values(osCounts),
             backgroundColor: ['#e57373', '#64b5f6']
           }]
         },
-        options: {
-          responsive: true,
-          plugins: { legend: { position: 'bottom' } }
-        }
+        options: { responsive: true, plugins: { legend: { display: false } } }
       });
 
-      // Building Chart
-      new Chart(document.getElementById("buildingChart"), {
-        type: 'bar',
-        data: {
-          labels: Object.keys(buildingCounts),
-          datasets: [{
-            label: 'Submissions by Building',
-            data: Object.values(buildingCounts),
-            backgroundColor: '#9575cd'
-          }]
-        },
-        options: {
-          responsive: true,
-          scales: {
-            y: {
-              beginAtZero: true
-            }
-          }
-        }
+      const desktopBody = document.querySelector("#desktopWin10 tbody");
+      win10Desktops.forEach(row => {
+        desktopBody.innerHTML += `
+          <tr>
+            <td>${row.name || ""}</td>
+            <td>${row.desktop_model || ""}</td>
+            <td><input type="checkbox" /></td>
+          </tr>`;
       });
 
-      // Windows 10 Device Tables
-      const win10TableBody = document.querySelector("#win10Table tbody");
-      const win10DetailsBody = document.querySelector("#win10Details tbody");
+      const ctBody = document.querySelector("#cleartouchWin10 tbody");
+      win10Cleartouch.forEach(row => {
+        ctBody.innerHTML += `
+          <tr>
+            <td>${row.name || ""}</td>
+            <td>${row.cleartouch_model || ""}</td>
+          </tr>`;
+      });
 
+      const win10DetailBody = document.querySelector("#win10Details tbody");
       windows10Users.forEach(row => {
-        const isDesktop = row.desktop_os === "Windows 10";
-        const isLaptop = row.laptop_os === "Windows 10";
-        const hasWin11Laptop = row.laptop_os === "Windows 11";
-
-        const deviceType = isDesktop ? "Desktop" : isLaptop ? "Laptop" : "";
-        if (deviceType) {
-          win10TableBody.innerHTML += `
-            <tr>
-              <td>${row.name || ""}</td>
-              <td>${row.building || ""}</td>
-              <td>${deviceType}</td>
-            </tr>`;
+        if (row.desktop_os === "Windows 10") {
+          win10DetailBody.innerHTML += `
+            <tr><td>${row.name || ""}</td><td>${row.building || ""}</td><td>Desktop</td><td>${row.desktop_model || ""}</td></tr>`;
         }
-
-        if (isDesktop && !hasWin11Laptop) {
-          win10DetailsBody.innerHTML += `
-            <tr style="background-color: #fff3cd;">
-              <td>${row.name || ""}</td>
-              <td>${row.building || ""}</td>
-              <td>Desktop</td>
-              <td>${row.desktop_model || ""}</td>
-            </tr>`;
-        }
-
-        if (isLaptop) {
-          win10DetailsBody.innerHTML += `
-            <tr>
-              <td>${row.name || ""}</td>
-              <td>${row.building || ""}</td>
-              <td>Laptop</td>
-              <td>${row.laptop_model || ""}</td>
-            </tr>`;
-        }
-      });
-
-      // Cleartouch OS Chart
-      const cleartouch10 = data.filter(row => row.cleartouch_os === "Windows 10").length;
-      const cleartouch11 = data.filter(row => row.cleartouch_os === "Windows 11").length;
-
-      new Chart(document.getElementById("cleartouchChart"), {
-        type: 'doughnut',
-        data: {
-          labels: ['Cleartouch Windows 10', 'Cleartouch Windows 11'],
-          datasets: [{
-            data: [cleartouch10, cleartouch11],
-            backgroundColor: ['#ffb74d', '#81c784']
-          }]
-        },
-        options: {
-          responsive: true,
-          plugins: { legend: { position: 'bottom' } }
+        if (row.laptop_os === "Windows 10") {
+          win10DetailBody.innerHTML += `
+            <tr><td>${row.name || ""}</td><td>${row.building || ""}</td><td>Laptop</td><td>${row.laptop_model || ""}</td></tr>`;
         }
       });
     }
 
     loadReportData();
   </script>
-  <div class="chart-container">
-    <h3>Cleartouch OS Breakdown</h3>
-    <canvas id="cleartouchChart"></canvas>
-  </div>
 </body>
 </html>
